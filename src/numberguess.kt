@@ -7,6 +7,7 @@ import java.io.File
 lateinit var winSound: Clip
 
 val soundBoard = mutableMapOf<String, Clip>()
+val highScores = mutableMapOf<Int, Int>()
 
 fun loadAllSounds() {
     val soundFiles = listOf("win.wav", "wrong.wav")
@@ -35,6 +36,35 @@ fun sfx(name: String) {
 fun welcome(){
     println("LIL ROBO STUDIOS")
     println("Welcome to my first Kotlin project!")
+}
+
+// Save system
+fun prinths(){
+    println("\n--- HIGH SCORES ---")
+    for (i in 1..5) {
+        val best = highScores[i] ?: "No record"
+        println("Level $i: $best")
+    }
+    print("\nSelect Level (1-5) or 0 to quit: ")
+}
+
+fun saveStatsToFile() {
+    val file = File("stats.txt")
+    // Converts the map into a string like "1:3\n2:11"
+    val data = highScores.map { "${it.key}:${it.value}" }.joinToString("\n")
+    file.writeText(data)
+}
+
+fun loadStatsFromFile() {
+    val file = File("stats.txt")
+    if (file.exists()) {
+        file.forEachLine { line ->
+            val parts = line.split(":")
+            if (parts.size == 2) {
+                highScores[parts[0].toInt()] = parts[1].toInt()
+            }
+        }
+    }
 }
 
 data class LevelConfig(val option: Int, val min: Int, val max: Int)
@@ -90,17 +120,32 @@ fun level(lvlno : Int, min : Int, max : Int) {
         }
 
     } while (guess != target)
-    println("Level $lvlno complete!")
-    println("It took you $attempt attempts.")
+    println("Level $lvlno complete in $attempt attempts.")
+
+    // 1. Get the previous best (or a huge number if they've never played)
+    val previousBest = highScores[lvlno] ?: Int.MAX_VALUE
+
+    // 2. Compare
+    if (attempt < previousBest) {
+        println("🎊 NEW BEST RECORD for Level $lvlno!")
+        highScores[lvlno] = attempt // Update the "dictionary"
+
+        // 3. Save to file so it's permanent
+        saveStatsToFile()
+    } else {
+        println("Best record for this level: $previousBest")
+    }
 }
 
 fun main() {
     loadAllSounds()
+    loadStatsFromFile()
     welcome()
 
     var playing = true
 
     while (playing) {
+        prinths()
         val config = select()
 
         if (config.option == 0) {
